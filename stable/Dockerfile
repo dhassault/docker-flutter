@@ -1,17 +1,18 @@
-FROM ubuntu:20.04
+# Ubuntu 22.04 LTS
+FROM ubuntu:jammy-20230816
 
 ENV UID=1000
 ENV GID=1000
 ENV USER="developer"
-ENV JAVA_VERSION="8"
-ENV ANDROID_TOOLS_URL="https://dl.google.com/android/repository/commandlinetools-linux-6858069_latest.zip"
-ENV ANDROID_VERSION="29"
-ENV ANDROID_BUILD_TOOLS_VERSION="30.0.2"
+ENV JAVA_VERSION="17"
+ENV ANDROID_TOOLS_URL="https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip"
+ENV ANDROID_VERSION="33"
+ENV ANDROID_BUILD_TOOLS_VERSION="33.0.2"
 ENV ANDROID_ARCHITECTURE="x86_64"
 ENV ANDROID_SDK_ROOT="/home/$USER/android"
 ENV FLUTTER_CHANNEL="stable"
-ENV FLUTTER_VERSION="3.3.4"
-ENV FLUTTER_URL="https://storage.googleapis.com/flutter_infra/releases/$FLUTTER_CHANNEL/linux/flutter_linux_$FLUTTER_VERSION-$FLUTTER_CHANNEL.tar.xz"
+ENV FLUTTER_VERSION="3.13.4"
+ENV FLUTTER_URL="https://storage.googleapis.com/flutter_infra_release/releases/$FLUTTER_CHANNEL/linux/flutter_linux_$FLUTTER_VERSION-$FLUTTER_CHANNEL.tar.xz"
 ENV FLUTTER_HOME="/home/$USER/flutter"
 ENV FLUTTER_WEB_PORT="8090"
 ENV FLUTTER_DEBUG_PORT="42000"
@@ -28,7 +29,8 @@ RUN apt-get update \
 RUN groupadd --gid $GID $USER \
   && useradd -s /bin/bash --uid $UID --gid $GID -m $USER \
   && echo $USER ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USER \
-  && chmod 0440 /etc/sudoers.d/$USER
+  && chmod 0440 /etc/sudoers.d/$USER \
+  && groupadd -r kvm
 
 USER $USER
 WORKDIR /home/$USER
@@ -47,7 +49,8 @@ RUN mkdir -p $ANDROID_SDK_ROOT \
   && yes "y" | sdkmanager "platforms;android-$ANDROID_VERSION" \
   && yes "y" | sdkmanager "platform-tools" \
   && yes "y" | sdkmanager "emulator" \
-  && yes "y" | sdkmanager "system-images;android-$ANDROID_VERSION;google_apis_playstore;$ANDROID_ARCHITECTURE"
+  && yes "y" | sdkmanager "system-images;android-$ANDROID_VERSION;google_apis_playstore;$ANDROID_ARCHITECTURE" \
+  && yes "y" | sdkmanager --install "cmdline-tools;latest"
 
 # flutter
 RUN curl -o flutter.tar.xz $FLUTTER_URL \
@@ -59,9 +62,11 @@ RUN curl -o flutter.tar.xz $FLUTTER_URL \
   && yes "y" | flutter doctor --android-licenses \
   && flutter doctor \
   && flutter emulators --create \
-  && flutter update-packages
+  && flutter update-packages \
+  && dart pub global activate flutter_scripts
 
 COPY entrypoint.sh /usr/local/bin/
 COPY chown.sh /usr/local/bin/
 COPY flutter-android-emulator.sh /usr/local/bin/flutter-android-emulator
+COPY flutter-web.sh /usr/local/bin/flutter-web
 ENTRYPOINT [ "/usr/local/bin/entrypoint.sh" ]
