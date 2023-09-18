@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# HACK: this fixes permission issues with KVM
+sudo chmod 777 /dev/kvm
+
 flutter emulators --launch $FLUTTER_EMULATOR_NAME
 
 started=0
